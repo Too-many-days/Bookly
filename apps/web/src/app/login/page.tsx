@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
-import { ArrowRight, Mail, Chrome } from "lucide-react";
+import { ArrowRight, Mail } from "lucide-react";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
