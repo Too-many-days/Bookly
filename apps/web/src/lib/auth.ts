@@ -20,7 +20,22 @@ const providers: NextAuthConfig["providers"] = [];
 
 // Only add Google if both env vars are set
 if (process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET) {
-  providers.push(Google);
+  providers.push(
+    Google({
+      clientId: process.env.AUTH_GOOGLE_ID,
+      clientSecret: process.env.AUTH_GOOGLE_SECRET,
+      // Use "state" instead of default PKCE to avoid cookie parsing
+      // issues on Vercel serverless (pkceCodeVerifier error)
+      checks: ["state"],
+      authorization: {
+        params: {
+          prompt: "consent",
+          access_type: "offline",
+          response_type: "code",
+        },
+      },
+    })
+  );
 }
 
 // Always add credentials provider
