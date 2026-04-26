@@ -20,19 +20,7 @@ const providers: NextAuthConfig["providers"] = [];
 
 // Only add Google if both env vars are set
 if (process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET) {
-  providers.push(
-    Google({
-      clientId: process.env.AUTH_GOOGLE_ID,
-      clientSecret: process.env.AUTH_GOOGLE_SECRET,
-      authorization: {
-        params: {
-          prompt: "consent",
-          access_type: "offline",
-          response_type: "code",
-        },
-      },
-    })
-  );
+  providers.push(Google);
 }
 
 // Always add credentials provider
