@@ -15,34 +15,51 @@ function generateSlug(name: string): string {
     + "-" + Math.random().toString(36).slice(2, 6);
 }
 
-export const authConfig: NextAuthConfig = {
-  providers: [
+// Build providers list dynamically
+const providers: NextAuthConfig["providers"] = [];
+
+// Only add Google if both env vars are set
+if (process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET) {
+  providers.push(
     Google({
       clientId: process.env.AUTH_GOOGLE_ID,
       clientSecret: process.env.AUTH_GOOGLE_SECRET,
-    }),
-    // Demo credentials provider for development
-    Credentials({
-      name: "Demo Login",
-      credentials: {
-        email: { label: "Email", type: "email", placeholder: "jane@bookly.app" },
+      authorization: {
+        params: {
+          prompt: "consent",
+          access_type: "offline",
+          response_type: "code",
+        },
       },
-      async authorize(credentials) {
-        // In demo mode, just return a demo user
-        const email = credentials?.email as string;
-        if (!email) return null;
+    })
+  );
+}
 
-        return {
-          id: "user-001",
-          email,
-          name: email.split("@")[0].replace(/[.-]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
-          image: null,
-        };
-      },
-    }),
-  ],
+// Always add credentials provider
+providers.push(
+  Credentials({
+    name: "Demo Login",
+    credentials: {
+      email: { label: "Email", type: "email", placeholder: "jane@bookly.app" },
+    },
+    async authorize(credentials) {
+      const email = credentials?.email as string;
+      if (!email) return null;
+
+      return {
+        id: "user-001",
+        email,
+        name: email.split("@")[0].replace(/[.-]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+        image: null,
+      };
+    },
+  })
+);
+
+export const authConfig: NextAuthConfig = {
+  providers,
   callbacks: {
-    async signIn({ user, account, profile }) {
+    async signIn({ user }) {
       if (!user.email) return false;
 
       // Check if user exists in our DB, if not create them
@@ -70,7 +87,7 @@ export const authConfig: NextAuthConfig = {
       }
       return session;
     },
-    async jwt({ token, user, account }) {
+    async jwt({ token, user }) {
       if (user) {
         // Look up our internal user ID
         try {
@@ -93,6 +110,7 @@ export const authConfig: NextAuthConfig = {
     strategy: "jwt",
   },
   trustHost: true,
+  debug: process.env.NODE_ENV === "development",
 };
 
 export const { handlers, auth, signIn, signOut } = NextAuth(authConfig);

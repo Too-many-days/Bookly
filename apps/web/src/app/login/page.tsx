@@ -2,12 +2,16 @@
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowRight, Mail } from "lucide-react";
+import { ArrowRight, Mail, AlertCircle } from "lucide-react";
+import { Suspense } from "react";
 
-export default function LoginPage() {
+function LoginForm() {
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const searchParams = useSearchParams();
+  const error = searchParams.get("error");
 
   const handleDemoLogin = async () => {
     setIsLoading(true);
@@ -22,6 +26,13 @@ export default function LoginPage() {
     await signIn("google", {
       callbackUrl: "/dashboard",
     });
+  };
+
+  const errorMessages: Record<string, string> = {
+    Configuration: "There is a server configuration issue. Please try Demo login.",
+    AccessDenied: "Access denied. You may not have permission to sign in.",
+    Verification: "The verification link has expired or has already been used.",
+    Default: "An error occurred during sign in. Please try again.",
   };
 
   return (
@@ -125,6 +136,27 @@ export default function LoginPage() {
           >
             Sign in to manage your bookings
           </p>
+
+          {/* Error message */}
+          {error && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                padding: "12px 16px",
+                borderRadius: "var(--radius-md)",
+                background: "#fef2f2",
+                border: "1px solid #fecaca",
+                marginBottom: "24px",
+                color: "#dc2626",
+                fontSize: "0.875rem",
+              }}
+            >
+              <AlertCircle size={16} />
+              {errorMessages[error] || errorMessages.Default}
+            </div>
+          )}
 
           {/* Google Sign In */}
           <button
@@ -258,5 +290,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   );
 }
