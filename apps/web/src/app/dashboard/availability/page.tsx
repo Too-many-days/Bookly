@@ -1,5 +1,6 @@
 import { Clock } from "lucide-react";
-import { demoSchedule, demoScheduleRules } from "@/lib/mock-data";
+import { getAuthUser } from "@/lib/get-auth-user";
+import { getDefaultSchedule } from "@/lib/dal";
 
 export const metadata = {
   title: "Availability — Bookly",
@@ -22,7 +23,13 @@ function formatTime(time: string): string {
   return `${displayHours}:${minutes.toString().padStart(2, "0")} ${period}`;
 }
 
-export default function AvailabilityPage() {
+export default async function AvailabilityPage() {
+  const user = await getAuthUser();
+  const scheduleData = await getDefaultSchedule(user.id);
+
+  const schedule = scheduleData?.schedule;
+  const scheduleRules = scheduleData?.rules ?? [];
+
   return (
     <>
       <div className="page-header">
@@ -39,76 +46,91 @@ export default function AvailabilityPage() {
       </div>
 
       <div className="page-body">
-        <div className="card" style={{ padding: "24px", marginBottom: "24px" }}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              marginBottom: "20px",
-            }}
-          >
-            <div>
-              <h3>{demoSchedule.name}</h3>
-              <p
-                style={{
-                  fontSize: "0.8125rem",
-                  color: "var(--text-secondary)",
-                  marginTop: "4px",
-                }}
-              >
-                {demoSchedule.timezone}
-              </p>
+        {!schedule ? (
+          <div className="card" style={{ padding: "48px", textAlign: "center" }}>
+            <div className="empty-state-icon" style={{ marginBottom: "16px" }}>
+              <Clock />
             </div>
-            <span className="badge badge-primary">Default</span>
+            <h3>No schedule configured</h3>
+            <p style={{ color: "var(--text-secondary)", marginBottom: "16px" }}>
+              Set up your availability so clients can book time with you.
+            </p>
+            <button className="btn btn-primary">
+              <Clock size={16} /> Create Schedule
+            </button>
           </div>
+        ) : (
+          <div className="card" style={{ padding: "24px", marginBottom: "24px" }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: "20px",
+              }}
+            >
+              <div>
+                <h3>{schedule.name}</h3>
+                <p
+                  style={{
+                    fontSize: "0.8125rem",
+                    color: "var(--text-secondary)",
+                    marginTop: "4px",
+                  }}
+                >
+                  {schedule.timezone}
+                </p>
+              </div>
+              <span className="badge badge-primary">Default</span>
+            </div>
 
-          <div className="availability-grid">
-            {DAYS.map((day, dayIndex) => {
-              const rules = demoScheduleRules.filter(
-                (r) => r.dayOfWeek === dayIndex && !r.isOverride
-              );
-              const isAvailable = rules.length > 0;
+            <div className="availability-grid">
+              {DAYS.map((day, dayIndex) => {
+                const rules = scheduleRules.filter(
+                  (r) => r.dayOfWeek === dayIndex && !r.isOverride
+                );
+                const isAvailable = rules.length > 0;
 
-              return (
-                <div key={day} style={{ display: "contents" }}>
-                  <div
-                    className="availability-day-label"
-                    style={{
-                      borderRight: "1px solid var(--border-default)",
-                    }}
-                  >
+                return (
+                  <div key={day} style={{ display: "contents" }}>
                     <div
+                      className="availability-day-label"
                       style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "10px",
+                        borderRight: "1px solid var(--border-default)",
                       }}
                     >
                       <div
-                        className={`toggle ${isAvailable ? "active" : ""}`}
-                        style={{ flexShrink: 0 }}
-                      />
-                      {day}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "10px",
+                        }}
+                      >
+                        <div
+                          className={`toggle ${isAvailable ? "active" : ""}`}
+                          style={{ flexShrink: 0 }}
+                        />
+                        {day}
+                      </div>
+                    </div>
+                    <div className="availability-day-slots">
+                      {isAvailable ? (
+                        rules.map((rule) => (
+                          <span key={rule.id} className="availability-slot">
+                            {formatTime(rule.startTime)} –{" "}
+                            {formatTime(rule.endTime)}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="availability-off">Unavailable</span>
+                      )}
                     </div>
                   </div>
-                  <div className="availability-day-slots">
-                    {isAvailable ? (
-                      rules.map((rule) => (
-                        <span key={rule.id} className="availability-slot">
-                          {formatTime(rule.startTime)} –{" "}
-                          {formatTime(rule.endTime)}
-                        </span>
-                      ))
-                    ) : (
-                      <span className="availability-off">Unavailable</span>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </>
   );

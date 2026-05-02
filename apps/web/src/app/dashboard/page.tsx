@@ -9,22 +9,27 @@ import {
   ChevronRight,
 } from "lucide-react";
 import Link from "next/link";
-import { demoBookings, demoEventTypes, demoUser } from "@/lib/mock-data";
+import { getAuthUser } from "@/lib/get-auth-user";
+import { getBookingsByUserId, getEventTypesByUserId } from "@/lib/dal";
 import { format, isAfter, isBefore, addDays } from "date-fns";
 
 export const metadata = {
   title: "Dashboard — Bookly",
 };
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  const user = await getAuthUser();
+  const allBookings = await getBookingsByUserId(user.id);
+  const eventTypes = await getEventTypesByUserId(user.id);
+
   const now = new Date();
-  const upcoming = demoBookings
+  const upcoming = allBookings
     .filter((b) => b.status === "confirmed" && isAfter(b.startTime, now))
     .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
 
-  const activeEventTypes = demoEventTypes.filter((e) => e.isActive);
-  const totalBookings = demoBookings.length;
-  const completedBookings = demoBookings.filter(
+  const activeEventTypes = eventTypes.filter((e) => e.isActive);
+  const totalBookings = allBookings.length;
+  const completedBookings = allBookings.filter(
     (b) => b.status === "completed"
   ).length;
 
@@ -32,7 +37,7 @@ export default function DashboardPage() {
     <>
       <div className="page-header">
         <div>
-          <h1>Welcome back, {demoUser.name.split(" ")[0]} 👋</h1>
+          <h1>Welcome back, {user.name.split(" ")[0]} 👋</h1>
           <p className="page-header-subtitle">
             Here&apos;s what&apos;s happening with your bookings today.
           </p>
@@ -54,7 +59,7 @@ export default function DashboardPage() {
               <div className="stat-value">{upcoming.length}</div>
               <div className="stat-label">Upcoming Bookings</div>
               <div className="stat-trend stat-trend-up">
-                <ArrowUpRight size={14} /> +12% vs last week
+                <ArrowUpRight size={14} /> Active
               </div>
             </div>
           </div>
@@ -66,9 +71,6 @@ export default function DashboardPage() {
             <div>
               <div className="stat-value">{totalBookings}</div>
               <div className="stat-label">Total Bookings</div>
-              <div className="stat-trend stat-trend-up">
-                <ArrowUpRight size={14} /> +8% vs last month
-              </div>
             </div>
           </div>
 
@@ -94,9 +96,11 @@ export default function DashboardPage() {
                 %
               </div>
               <div className="stat-label">Show-up Rate</div>
-              <div className="stat-trend stat-trend-up">
-                <ArrowUpRight size={14} /> Excellent
-              </div>
+              {totalBookings > 0 && (
+                <div className="stat-trend stat-trend-up">
+                  <ArrowUpRight size={14} /> Excellent
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -134,8 +138,8 @@ export default function DashboardPage() {
                     </p>
                   </div>
                 ) : (
-                  upcoming.map((booking) => {
-                    const eventType = demoEventTypes.find(
+                  upcoming.slice(0, 5).map((booking) => {
+                    const eventType = eventTypes.find(
                       (e) => e.id === booking.eventTypeId
                     );
                     return (
@@ -185,7 +189,7 @@ export default function DashboardPage() {
               {activeEventTypes.map((et) => (
                 <Link
                   key={et.id}
-                  href={`/book/${demoUser.slug}/${et.slug}`}
+                  href={`/book/${user.slug}/${et.slug}`}
                   className="card"
                   style={{
                     padding: "16px 20px",
@@ -231,6 +235,17 @@ export default function DashboardPage() {
                   />
                 </Link>
               ))}
+
+              {activeEventTypes.length === 0 && (
+                <div className="card" style={{ padding: "24px", textAlign: "center" }}>
+                  <p style={{ color: "var(--text-secondary)", fontSize: "0.875rem" }}>
+                    No event types yet. Create one to start receiving bookings.
+                  </p>
+                  <Link href="/dashboard/event-types" className="btn btn-primary btn-sm" style={{ marginTop: "12px" }}>
+                    Create Event Type
+                  </Link>
+                </div>
+              )}
             </div>
 
             {/* Embed Code Card */}

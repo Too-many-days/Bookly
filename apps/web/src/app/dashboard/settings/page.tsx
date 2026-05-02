@@ -1,11 +1,14 @@
 import { User, Globe, Palette, Bell } from "lucide-react";
-import { demoUser } from "@/lib/mock-data";
+import { getAuthUser } from "@/lib/get-auth-user";
 
 export const metadata = {
   title: "Settings — Bookly",
 };
 
-export default function SettingsPage() {
+export default async function SettingsPage() {
+  const user = await getAuthUser();
+  const branding = user.branding as { accentColor?: string; logoUrl?: string } | null;
+
   return (
     <>
       <div className="page-header">
@@ -26,11 +29,11 @@ export default function SettingsPage() {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", maxWidth: "600px" }}>
             <div className="form-group">
               <label className="form-label">Full Name</label>
-              <input className="input" defaultValue={demoUser.name} />
+              <input className="input" defaultValue={user.name} />
             </div>
             <div className="form-group">
               <label className="form-label">Email</label>
-              <input className="input" defaultValue={demoUser.email} type="email" />
+              <input className="input" defaultValue={user.email} type="email" />
             </div>
             <div className="form-group">
               <label className="form-label">Booking URL Slug</label>
@@ -51,14 +54,14 @@ export default function SettingsPage() {
                 </span>
                 <input
                   className="input"
-                  defaultValue={demoUser.slug}
+                  defaultValue={user.slug}
                   style={{ borderRadius: "0 var(--radius-md) var(--radius-md) 0" }}
                 />
               </div>
             </div>
             <div className="form-group">
               <label className="form-label">Timezone</label>
-              <select className="input" defaultValue={demoUser.timezone}>
+              <select className="input" defaultValue={user.timezone}>
                 <option value="America/New_York">Eastern Time (ET)</option>
                 <option value="America/Chicago">Central Time (CT)</option>
                 <option value="America/Denver">Mountain Time (MT)</option>
@@ -66,6 +69,7 @@ export default function SettingsPage() {
                 <option value="Europe/London">London (GMT)</option>
                 <option value="Europe/Paris">Paris (CET)</option>
                 <option value="Asia/Tokyo">Tokyo (JST)</option>
+                <option value="UTC">UTC</option>
               </select>
             </div>
           </div>
@@ -85,7 +89,7 @@ export default function SettingsPage() {
               <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                 <input
                   type="color"
-                  defaultValue="#6366f1"
+                  defaultValue={branding?.accentColor || "#6366f1"}
                   style={{
                     width: "44px",
                     height: "44px",
@@ -95,7 +99,7 @@ export default function SettingsPage() {
                     padding: "2px",
                   }}
                 />
-                <input className="input" defaultValue="#6366f1" style={{ maxWidth: "120px" }} />
+                <input className="input" defaultValue={branding?.accentColor || "#6366f1"} style={{ maxWidth: "120px" }} />
                 <div style={{ display: "flex", gap: "6px" }}>
                   {["#6366f1", "#06b6d4", "#10b981", "#f59e0b", "#ec4899", "#ef4444"].map((color) => (
                     <div

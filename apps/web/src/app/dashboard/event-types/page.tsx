@@ -9,13 +9,17 @@ import {
   Copy,
   ExternalLink,
 } from "lucide-react";
-import { demoEventTypes, demoUser } from "@/lib/mock-data";
+import { getAuthUser } from "@/lib/get-auth-user";
+import { getEventTypesByUserId } from "@/lib/dal";
 
 export const metadata = {
   title: "Event Types — Bookly",
 };
 
-export default function EventTypesPage() {
+export default async function EventTypesPage() {
+  const user = await getAuthUser();
+  const eventTypes = await getEventTypesByUserId(user.id);
+
   return (
     <>
       <div className="page-header">
@@ -33,7 +37,21 @@ export default function EventTypesPage() {
 
       <div className="page-body">
         <div className="event-types-grid">
-          {demoEventTypes.map((et, index) => {
+          {eventTypes.length === 0 && (
+            <div className="card" style={{ padding: "48px", textAlign: "center", gridColumn: "1 / -1" }}>
+              <div className="empty-state-icon" style={{ marginBottom: "16px" }}>
+                <Clock />
+              </div>
+              <h3>No event types yet</h3>
+              <p style={{ color: "var(--text-secondary)", marginBottom: "16px" }}>
+                Create your first event type to start receiving bookings.
+              </p>
+              <button className="btn btn-primary">
+                <Plus size={16} /> Create Event Type
+              </button>
+            </div>
+          )}
+          {eventTypes.map((et, index) => {
             const locationIcon =
               et.locationType === "video" ? (
                 <Video size={14} />
@@ -47,7 +65,7 @@ export default function EventTypesPage() {
               <div
                 key={et.id}
                 className={`card event-type-card animate-slide-up animate-slide-up-${
-                  index + 1
+                  Math.min(index + 1, 4)
                 }`}
               >
                 <div
@@ -98,7 +116,7 @@ export default function EventTypesPage() {
                     </div>
                     <div className="event-type-actions">
                       <Link
-                        href={`/book/${demoUser.slug}/${et.slug}`}
+                        href={`/book/${user.slug}/${et.slug}`}
                         className="btn btn-ghost btn-sm"
                         title="Preview"
                       >
