@@ -229,6 +229,62 @@ export async function getScheduleRules(scheduleId: string): Promise<ScheduleRule
     .where(eq(scheduleRules.scheduleId, scheduleId));
 }
 
+export async function createSchedule(data: {
+  userId: string;
+  name: string;
+  timezone: string;
+  isDefault: boolean;
+}): Promise<AvailabilitySchedule> {
+  if (isDemoMode()) {
+    return { ...demoSchedule, ...data };
+  }
+  const result = await db!
+    .insert(availabilitySchedules)
+    .values(data)
+    .returning();
+  return result[0];
+}
+
+export async function upsertScheduleRules(
+  scheduleId: string,
+  rules: Array<{
+    dayOfWeek: number;
+    startTime: string;
+    endTime: string;
+  }>
+): Promise<ScheduleRule[]> {
+  if (isDemoMode()) {
+    return demoScheduleRules;
+  }
+  // Delete existing non-override rules for this schedule
+  await db!
+    .delete(scheduleRules)
+    .where(
+      and(
+        eq(scheduleRules.scheduleId, scheduleId),
+        eq(scheduleRules.isOverride, false)
+      )
+    );
+
+  if (rules.length === 0) return [];
+
+  // Insert new rules
+  const result = await db!
+    .insert(scheduleRules)
+    .values(
+      rules.map((r) => ({
+        scheduleId,
+        dayOfWeek: r.dayOfWeek,
+        startTime: r.startTime,
+        endTime: r.endTime,
+        isOverride: false,
+      }))
+    )
+    .returning();
+
+  return result;
+}
+
 // ─── Bookings ────────────────────────────────────────────────
 
 export async function getBookingsByUserId(

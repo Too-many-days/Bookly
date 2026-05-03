@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   createBooking,
+  cancelBooking,
   getUserBySlug,
   getEventTypeBySlug,
   getAvailableSlots,
 } from "@/lib/dal";
+import { auth } from "@/lib/auth";
 import { sendBookingConfirmation } from "@/lib/email";
 
 /**
@@ -124,6 +126,45 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     console.error("Booking API error:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * PATCH /api/bookings — Cancel a booking
+ * Body: { bookingId, reason? }
+ */
+export async function PATCH(request: NextRequest) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { bookingId, reason } = body;
+
+    if (!bookingId) {
+      return NextResponse.json(
+        { error: "Booking ID is required" },
+        { status: 400 }
+      );
+    }
+
+    const cancelled = await cancelBooking(bookingId, reason || "Cancelled by host");
+    if (!cancelled) {
+      return NextResponse.json(
+        { error: "Booking not found" },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({ success: true, booking: cancelled });
+  } catch (error) {
+    console.error("Booking PATCH error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

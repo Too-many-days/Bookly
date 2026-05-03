@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAvailableSlots, getUserBySlug, getEventTypeBySlug } from "@/lib/dal";
+import { getAvailableSlots, getUserBySlug, getEventTypeBySlug, getDefaultSchedule, createSchedule, upsertScheduleRules } from "@/lib/dal";
+import { auth } from "@/lib/auth";
 
 /**
  * GET /api/availability?slug=jane-cooper&event=strategy-session&date=2026-04-28
@@ -79,6 +80,59 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Availability API error:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * PUT /api/availability — Save schedule rules
+ * Body: { rules: Array<{ dayOfWeek: number, startTime: string, endTime: string }> }
+ */
+export async function PUT(request: NextRequest) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { rules } = body;
+
+    if (!Array.isArray(rules)) {
+      return NextResponse.json(
+        { error: "Rules array is required" },
+        { status: 400 }
+      );
+    }
+
+    // Get or create default schedule
+    let scheduleData = await getDefaultSchedule(session.user.id);
+
+    if (!scheduleData) {
+      const newSchedule = await createSchedule({
+        userId: session.user.id,
+        name: "Working Hours",
+        timezone: "UTC",
+        isDefault: true,
+      });
+      scheduleData = { schedule: newSchedule, rules: [] };
+    }
+
+    // Upsert the rules
+    const updatedRules = await upsertScheduleRules(
+      scheduleData.schedule.id,
+      rules
+    );
+
+    return NextResponse.json({
+      schedule: scheduleData.schedule,
+      rules: updatedRules,
+    });
+  } catch (error) {
+    console.error("Availability PUT error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
